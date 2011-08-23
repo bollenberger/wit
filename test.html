@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<html>
+<head><title></title></head>
+<body>
+<iframe id='send' style='display:none' src=''></iframe>
+<script type='text/javascript'>
+var sendFrame = document.getElementById('send');
+function send(id, event) {
+    var uri='send?sid=#{sid}&id='+id+'&event='+event;
+    for (i=2;i<send.arguments.length;++i) {
+            uri += '&args[]='+encodeURI(send.arguments[i]);
+    }
+    sendFrame.location.href=uri;
+}
+
+var registry = [];
+var dummyParent = new Object();
+dummyParent.window = window;
+dummyParent.document = window.document;
+dummyParent.parent = null;
+dummyParent.addChild = function (child) {};
+dummyParent.removeChild = function (child) {};
+var main = new Widget(dummyParent, 0, window.document.body);
+
+function Widget(parent, id, element) {
+    // ** Constructor **
+
+    registry[id] = this;
+    this.id = id;
+
+    this.parent = parent;
+
+    this.element = element;
+
+    // In objects with an internal frame and an external frame,
+    // the containerElement is the internal frame.
+    this.containerElement = element;
+    this.children = [];
+
+    this.parent.addChild(this);
+
+    this.window = parent.window;
+    this.document = parent.document;
+
+    // ** Methods **
+
+    this.addChild = function (child) {
+        this.children[child.id] = child;
+        if (child.element != null) {
+            this.containerElement.appendChild(child.element);
+        }
+    };
+
+    this.removeChild = function (child) {
+        delete this.children[child.id];
+        if (child.element != null) {
+            this.containerElement.removeChild(child.element);
+        }
+    };
+
+    this.destroy = function () {
+        // Destroy all sub children recursively.
+        for (var child in this.children) {
+            this.children[child].destroy();
+        }
+
+        // Destroy this widget.
+        delete registry[this.id];
+        this.parent.removeChild(this);
+    };
+}
+
+function Button(parent, id, caption) {
+    var el = parent.document.createElement('input');
+    el.setAttribute('type', 'button');
+    el.setAttribute('value', caption);
+    return new Widget(parent, id, el);
+}
+
+function Window(parent, id, title) {
+    var self = new Widget(parent, id, null);
+    self.window = parent.window.open('', '_blank',
+        'menubar=no,location=no,status=no,toolbar=no,resizable=yes');
+    self.document = self.window.document;
+    self.containerElement = self.document.body;
+    self.document.title = title;
+    return self;
+}
+
+new Button(registry[0], 1, 'Button');
+</script>
+</body>
+</html>
